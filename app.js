@@ -1,16 +1,8 @@
 const express = require('express')
 const jwt = require('jsonwebtoken')
-
-const variables = ['JWT_SECRET', 'PORT']
-for(let variable of variables){
-  if(!process.env[variable]){
-    console.error("Missing environment variable " + variable)
-    process.exit(1)
-  }
-}
+const {sequelize, Project} = require('./models')
 
 const app = express()
-
 app.use( express.json() )
 
 app.use( (req,res,next) => {
@@ -21,10 +13,14 @@ app.use( (req,res,next) => {
   next()
 })
 
+app.get('/projects', async (req,res) => {
+  const projects = await Project.findAll({})
+  res.json(projects)
+})
+
 app.get('/', (req,res) => {
   res.json({message: 'Hello World!'})
 })
-
 app.get('/hemlighet', (req,res) => {
   if(!req.header('Authorization')){
     res.status(403).json({error: 'Aja baja'})
@@ -34,7 +30,6 @@ app.get('/hemlighet', (req,res) => {
     res.json(data)
   }
 })
-
 app.post('/login', (req,res) => {
   if(req.body.hemlighet === 'grillkorv'){
     const token = jwt.sign(
@@ -48,6 +43,14 @@ app.post('/login', (req,res) => {
 })
 
 const PORT = process.env.PORT || 5000
-app.listen(PORT, () => {
-  console.log(`Server listening on ${PORT}`)
-})
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log('Connection has been established successfully.');
+    app.listen(PORT, () => {
+      console.log(`Server listening on ${PORT}`)
+    })
+  })
+  .catch(err => {
+    console.error('Unable to connect to the database:', err);
+  });
